@@ -21,6 +21,7 @@ export default {
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          dark: "hsl(var(--primary-dark))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -30,6 +31,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -57,6 +62,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-subtle': 'var(--gradient-subtle)',
       },
       borderRadius: {
         lg: "var(--radius)",
