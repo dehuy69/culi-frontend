@@ -8,10 +8,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Home, Settings, Link2, ChevronDown, LogOut } from "lucide-react";
+import { Home, Settings, Link2, ChevronDown, LogOut, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
-import { Workspace } from "@/lib/mockData";
+import { apiClient } from "@/lib/api";
+import type { Workspace } from "@/lib/types";
 
 interface WorkspaceSidebarProps {
   currentWorkspaceId?: string;
@@ -21,19 +22,41 @@ const WorkspaceSidebar = ({ currentWorkspaceId }: WorkspaceSidebarProps) => {
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const ws = storage.getWorkspaces();
-    setWorkspaces(ws);
-    if (currentWorkspaceId) {
-      const current = ws.find((w) => w.id === currentWorkspaceId);
+    loadWorkspaces();
+  }, []);
+
+  useEffect(() => {
+    if (currentWorkspaceId && workspaces.length > 0) {
+      const workspaceId = parseInt(currentWorkspaceId);
+      const current = workspaces.find((w) => w.id === workspaceId);
       setCurrentWorkspace(current || null);
     }
-  }, [currentWorkspaceId]);
+  }, [currentWorkspaceId, workspaces]);
+
+  const loadWorkspaces = async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiClient.listWorkspaces();
+      setWorkspaces(data);
+    } catch (error: any) {
+      console.error("Error loading workspaces:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
+    apiClient.setToken(null);
     storage.clearAuth();
     navigate("/");
+  };
+
+  const getWorkspaceIcon = (workspace: Workspace) => {
+    // For now, use a default icon. Can be enhanced to support custom icons
+    return "🏪";
   };
 
   return (
@@ -52,30 +75,49 @@ const WorkspaceSidebar = ({ currentWorkspaceId }: WorkspaceSidebarProps) => {
       <div className="p-3 border-b border-sidebar-border">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
+            <Button variant="outline" className="w-full justify-between" disabled={isLoading}>
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-lg">{currentWorkspace?.icon || "🏪"}</span>
-                <span className="truncate text-sm">{currentWorkspace?.name || "Chọn workspace"}</span>
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className="text-lg">
+                    {currentWorkspace ? getWorkspaceIcon(currentWorkspace) : "🏪"}
+                  </span>
+                )}
+                <span className="truncate text-sm">
+                  {isLoading
+                    ? "Đang tải..."
+                    : currentWorkspace?.name || "Chọn workspace"}
+                </span>
               </div>
               <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
-            {workspaces.map((ws) => (
-              <DropdownMenuItem
-                key={ws.id}
-                onClick={() => navigate(`/workspace/${ws.id}`)}
-                className="cursor-pointer"
-              >
-                <span className="mr-2">{ws.icon}</span>
-                <span className="truncate">{ws.name}</span>
+            {isLoading ? (
+              <DropdownMenuItem disabled>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Đang tải...
               </DropdownMenuItem>
-            ))}
-            <Separator className="my-1" />
-            <DropdownMenuItem onClick={() => navigate("/dashboard")} className="cursor-pointer">
-              <Home className="w-4 h-4 mr-2" />
-              Tất cả workspaces
-            </DropdownMenuItem>
+            ) : (
+              <>
+                {workspaces.map((ws) => (
+                  <DropdownMenuItem
+                    key={ws.id}
+                    onClick={() => navigate(`/workspace/${ws.id}`)}
+                    className="cursor-pointer"
+                  >
+                    <span className="mr-2">{getWorkspaceIcon(ws)}</span>
+                    <span className="truncate">{ws.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                <Separator className="my-1" />
+                <DropdownMenuItem onClick={() => navigate("/dashboard")} className="cursor-pointer">
+                  <Home className="w-4 h-4 mr-2" />
+                  Tất cả workspaces
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

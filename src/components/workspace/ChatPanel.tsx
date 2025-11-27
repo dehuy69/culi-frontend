@@ -3,19 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Monitor, MonitorOff } from "lucide-react";
-import { Message } from "@/lib/mockData";
+import type { FrontendMessage } from "@/lib/types";
 import ChatMessage from "./ChatMessage";
 
 interface ChatPanelProps {
-  messages: Message[];
+  messages: FrontendMessage[];
   onSendMessage: (content: string) => void;
   onToggleBrowser: () => void;
   showBrowser: boolean;
+  isLoading?: boolean;
 }
 
-const ChatPanel = ({ messages, onSendMessage, onToggleBrowser, showBrowser }: ChatPanelProps) => {
+const ChatPanel = ({
+  messages,
+  onSendMessage,
+  onToggleBrowser,
+  showBrowser,
+  isLoading = false,
+}: ChatPanelProps) => {
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,12 +33,10 @@ const ChatPanel = ({ messages, onSendMessage, onToggleBrowser, showBrowser }: Ch
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     onSendMessage(input.trim());
     setInput("");
-    setIsTyping(true);
-    setTimeout(() => setIsTyping(false), 3000);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -82,7 +86,7 @@ const ChatPanel = ({ messages, onSendMessage, onToggleBrowser, showBrowser }: Ch
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
-          {isTyping && (
+          {isLoading && (
             <div className="flex gap-3 animate-fade-in">
               <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                 C
@@ -116,7 +120,7 @@ const ChatPanel = ({ messages, onSendMessage, onToggleBrowser, showBrowser }: Ch
               type="submit"
               size="icon"
               className="gradient-primary h-[60px] w-[60px] flex-shrink-0"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isLoading}
             >
               <Send className="w-5 h-5" />
             </Button>

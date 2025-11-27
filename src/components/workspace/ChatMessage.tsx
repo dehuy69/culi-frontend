@@ -1,11 +1,11 @@
-import { Message } from "@/lib/mockData";
+import type { FrontendMessage } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Search, History, Database, FileText, Zap, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
-  message: Message;
+  message: FrontendMessage;
 }
 
 const reasoningIcons = {

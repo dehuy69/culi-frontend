@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
 import { toast } from "@/hooks/use-toast";
+import { apiClient } from "@/lib/api";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,44 +18,94 @@ const Auth = () => {
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "" });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Mock login
-    setTimeout(() => {
-      if (loginForm.email && loginForm.password) {
-        storage.setAuth(true);
-        storage.setCurrentUser({
-          id: "1",
-          email: loginForm.email,
-          name: loginForm.email.split("@")[0],
-        });
-        toast({ title: "Đăng nhập thành công!" });
-        navigate("/dashboard");
-      }
+    try {
+      const response = await apiClient.login(loginForm.email, loginForm.password);
+      const userInfo = await apiClient.getCurrentUser();
+      
+      storage.setAuth(true);
+      storage.setCurrentUser({
+        id: userInfo.id.toString(),
+        email: userInfo.username,
+        name: userInfo.username.split("@")[0],
+      });
+      toast({ title: "Đăng nhập thành công!" });
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Đăng nhập thất bại",
+        description: error.message || "Vui lòng kiểm tra lại thông tin đăng nhập",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Mock signup
-    setTimeout(() => {
-      if (signupForm.name && signupForm.email && signupForm.password) {
-        storage.setAuth(true);
-        storage.setCurrentUser({
-          id: "1",
-          email: signupForm.email,
-          name: signupForm.name,
-        });
-        toast({ title: "Đăng ký thành công!" });
-        navigate("/dashboard");
-      }
+    // Validate password length
+    if (signupForm.password.length < 6) {
+      toast({
+        title: "Mật khẩu quá ngắn",
+        description: "Mật khẩu phải có ít nhất 6 ký tự",
+        variant: "destructive",
+      });
       setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    // Validate username/email
+    if (signupForm.email.length < 3 || signupForm.email.length > 100) {
+      toast({
+        title: "Email không hợp lệ",
+        description: "Email phải có từ 3 đến 100 ký tự",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Register user (use email as username)
+      await apiClient.register(signupForm.email, signupForm.password);
+      
+      // Auto login after registration
+      const response = await apiClient.login(signupForm.email, signupForm.password);
+      const userInfo = await apiClient.getCurrentUser();
+      
+      storage.setAuth(true);
+      storage.setCurrentUser({
+        id: userInfo.id.toString(),
+        email: userInfo.username,
+        name: signupForm.name,
+      });
+      toast({ title: "Đăng ký thành công!" });
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      let errorMessage = error.message || "Vui lòng thử lại";
+      
+      // Provide more user-friendly error messages
+      if (errorMessage.includes("already exists") || errorMessage.includes("Username already exists")) {
+        errorMessage = "Email này đã được sử dụng. Vui lòng chọn email khác.";
+      } else if (errorMessage.includes("password")) {
+        errorMessage = "Mật khẩu không hợp lệ. Vui lòng thử lại với mật khẩu khác.";
+      }
+      
+      toast({
+        title: "Đăng ký thất bại",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
