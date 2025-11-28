@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Set API base URL to empty or relative path so frontend uses /api
+        # Nginx will proxy /api requests to backend
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    container_name: culi-frontend
+    ports:
+      - "8080:80"
+    environment:
+      # Backend host and port for nginx proxy
+      # For standalone: set to host.docker.internal (Docker Desktop) or host IP
+      # For Linux without Docker Desktop: use gateway IP or host network mode
+      - BACKEND_HOST=${BACKEND_HOST:-172.17.0.1}
+      - BACKEND_PORT=${BACKEND_PORT:-8000}
+    networks:
+      - culi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  culi-network:
+    driver: bridge
+    external: false
+

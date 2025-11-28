@@ -12,7 +12,9 @@ import type {
   SupportedApp,
 } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8001";
+// Use relative path if VITE_API_BASE_URL is empty or not set
+// This allows nginx to proxy /api requests to backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 export interface ApiError {
   detail: string;
