@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
+import Logo from "@/components/Logo";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -112,11 +113,8 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center text-white font-bold text-xl">
-              C
-            </div>
-            <span className="text-2xl font-bold gradient-text">Culi</span>
+          <div className="mb-4">
+            <Logo size="lg" showText={true} />
           </div>
           <p className="text-muted-foreground">Trợ lý kế toán AI cho hộ kinh doanh</p>
         </div>

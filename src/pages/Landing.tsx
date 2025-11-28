@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Brain, Database, Zap, Shield, MessageSquare, Link2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Logo from "@/components/Logo";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -43,12 +44,7 @@ const Landing = () => {
       {/* Header */}
       <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold text-lg">
-              C
-            </div>
-            <span className="text-xl font-bold gradient-text">Culi</span>
-          </div>
+          <Logo size="md" showText={true} />
           <Button onClick={() => navigate("/auth")} variant="outline">
             Đăng nhập
           </Button>

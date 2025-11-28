@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
-import { storage } from "@/lib/localStorage";
+import { apiClient } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Trash2 } from "lucide-react";
+import { Trash2, Settings as SettingsIcon, Loader2, AlertCircle } from "lucide-react";
+import type { Workspace } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,129 +22,340 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const Settings = () => {
-  const { id } = useParams();
+  const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [workspace, setWorkspace] = useState(storage.getWorkspaces().find((w) => w.id === id));
-  const [workspaceName, setWorkspaceName] = useState(workspace?.name || "");
-  const [workspaceIcon, setWorkspaceIcon] = useState(workspace?.icon || "");
+  
+  // Memoize workspaceId to prevent recalculation
+  const workspaceId = useMemo(() => {
+    if (!params.id) return null;
+    const parsed = parseInt(params.id, 10);
+    return isNaN(parsed) ? null : parsed;
+  }, [params.id]);
 
-  const handleSaveWorkspace = () => {
-    if (!id) return;
-    storage.updateWorkspace(id, { name: workspaceName, icon: workspaceIcon });
-    toast({ title: "Đã lưu thay đổi" });
-    setWorkspace(storage.getWorkspaces().find((w) => w.id === id));
+  // Workspace state
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
+  const [isSavingWorkspace, setIsSavingWorkspace] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+
+  // Delete workspace state
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Load workspace - only run once when workspaceId changes
+  useEffect(() => {
+    if (!workspaceId) {
+      setIsLoadingWorkspace(false);
+      setWorkspaceError("Workspace ID không hợp lệ");
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWorkspace = async () => {
+      try {
+        setIsLoadingWorkspace(true);
+        setWorkspaceError(null);
+        const data = await apiClient.getWorkspace(workspaceId);
+        if (!cancelled) {
+          setWorkspace(data);
+          setWorkspaceName(data.name);
+        }
+      } catch (error: any) {
+        console.error("Error loading workspace:", error);
+        if (!cancelled) {
+          setWorkspaceError(error.message || "Không thể tải thông tin workspace");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingWorkspace(false);
+        }
+      }
+    };
+
+    loadWorkspace();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
+
+  const handleSaveWorkspace = async () => {
+    if (!workspaceId || !workspaceName.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Tên workspace không được để trống",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (workspaceName.trim().length > 200) {
+      toast({
+        title: "Lỗi",
+        description: "Tên workspace không được vượt quá 200 ký tự",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingWorkspace(true);
+    try {
+      const updated = await apiClient.updateWorkspace(workspaceId, {
+        name: workspaceName.trim(),
+      });
+      setWorkspace(updated);
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật thông tin workspace",
+      });
+    } catch (error: any) {
+      console.error("Error updating workspace:", error);
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật workspace",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingWorkspace(false);
+    }
   };
 
-  const handleDeleteWorkspace = () => {
-    if (!id) return;
-    storage.deleteWorkspace(id);
-    toast({ title: "Đã xóa workspace" });
-    navigate("/dashboard");
+  const handleDeleteWorkspace = async () => {
+    if (!workspaceId || !workspaceToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await apiClient.deleteWorkspace(workspaceId);
+      toast({ title: "Đã xóa workspace" });
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Error deleting workspace:", error);
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa workspace",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setWorkspaceToDelete(null);
+    }
   };
+
+  // Early return if no workspace ID
+  if (!workspaceId) {
+    return (
+      <div className="h-screen flex bg-background">
+        <WorkspaceSidebar />
+        <div className="flex-1 overflow-auto">
+          <div className="container max-w-4xl mx-auto p-6">
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  Lỗi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Không tìm thấy workspace ID. Vui lòng chọn một workspace từ dashboard.
+                </p>
+                <Button onClick={() => navigate("/dashboard")} className="gradient-primary">
+                  Quay về Dashboard
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render loading state immediately to prevent freeze
+  if (isLoadingWorkspace && !workspace && !workspaceError) {
+    return (
+      <div className="h-screen flex bg-background">
+        <WorkspaceSidebar currentWorkspaceId={params.id} />
+        <div className="flex-1 overflow-auto">
+          <div className="container max-w-4xl mx-auto p-6">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+                <SettingsIcon className="w-8 h-8" />
+                Cài đặt Workspace
+              </h1>
+              <p className="text-muted-foreground">Quản lý cài đặt cho workspace này</p>
+            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="h-4 bg-muted rounded w-24 animate-pulse" />
+                    <div className="h-10 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="h-10 bg-muted rounded w-32 animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex bg-background">
-      <WorkspaceSidebar currentWorkspaceId={id} />
-      
+      <WorkspaceSidebar currentWorkspaceId={params.id} />
       <div className="flex-1 overflow-auto">
         <div className="container max-w-4xl mx-auto p-6">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2">Cài đặt</h1>
-            <p className="text-muted-foreground">Quản lý cài đặt workspace và tài khoản</p>
+            <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+              <SettingsIcon className="w-8 h-8" />
+              Cài đặt Workspace
+            </h1>
+            <p className="text-muted-foreground">Quản lý cài đặt cho workspace này</p>
           </div>
 
-          <Tabs defaultValue="workspace">
-            <TabsList className="mb-6">
-              <TabsTrigger value="workspace">Workspace</TabsTrigger>
-              <TabsTrigger value="profile">Hồ sơ</TabsTrigger>
-            </TabsList>
+          <div className="space-y-4">
+            {/* Workspace Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SettingsIcon className="w-5 h-5" />
+                  Thông tin Workspace
+                </CardTitle>
+                <CardDescription>Cập nhật tên workspace</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isLoadingWorkspace ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="h-4 bg-muted rounded w-24 animate-pulse" />
+                      <div className="h-10 bg-muted rounded animate-pulse" />
+                    </div>
+                    <div className="h-10 bg-muted rounded w-32 animate-pulse" />
+                  </div>
+                ) : workspaceError ? (
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>{workspaceError}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (workspaceId) {
+                          setIsLoadingWorkspace(true);
+                          setWorkspaceError(null);
+                          apiClient
+                            .getWorkspace(workspaceId)
+                            .then((data) => {
+                              setWorkspace(data);
+                              setWorkspaceName(data.name);
+                            })
+                            .catch((error: any) => {
+                              setWorkspaceError(error.message || "Không thể tải workspace");
+                            })
+                            .finally(() => setIsLoadingWorkspace(false));
+                        }
+                      }}
+                    >
+                      Thử lại
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="workspace-name">Tên workspace</Label>
+                      <Input
+                        id="workspace-name"
+                        value={workspaceName}
+                        onChange={(e) => setWorkspaceName(e.target.value)}
+                        placeholder="Tên workspace"
+                        disabled={isSavingWorkspace}
+                        maxLength={200}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {workspaceName.length}/200 ký tự
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleSaveWorkspace}
+                      disabled={isSavingWorkspace || !workspaceName.trim()}
+                      className="gradient-primary"
+                    >
+                      {isSavingWorkspace ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        "Lưu thay đổi"
+                      )}
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
-            <TabsContent value="workspace" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Thông tin Workspace</CardTitle>
-                  <CardDescription>Cập nhật tên và icon của workspace</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="workspace-name">Tên workspace</Label>
-                    <Input
-                      id="workspace-name"
-                      value={workspaceName}
-                      onChange={(e) => setWorkspaceName(e.target.value)}
-                      placeholder="Tên workspace"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="workspace-icon">Icon (emoji)</Label>
-                    <Input
-                      id="workspace-icon"
-                      value={workspaceIcon}
-                      onChange={(e) => setWorkspaceIcon(e.target.value)}
-                      placeholder="🏪"
-                      maxLength={2}
-                    />
-                  </div>
-                  <Button onClick={handleSaveWorkspace} className="gradient-primary">
-                    Lưu thay đổi
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-destructive">
-                <CardHeader>
-                  <CardTitle className="text-destructive">Vùng nguy hiểm</CardTitle>
-                  <CardDescription>Xóa workspace này vĩnh viễn</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="gap-2">
-                        <Trash2 className="w-4 h-4" />
-                        Xóa workspace
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Hành động này không thể hoàn tác. Tất cả dữ liệu trong workspace sẽ bị xóa vĩnh viễn.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteWorkspace} className="bg-destructive">
-                          Xóa
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="profile" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Thông tin cá nhân</CardTitle>
-                  <CardDescription>Thông tin tài khoản của bạn</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input value={storage.getCurrentUser()?.email || ""} disabled />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tên</Label>
-                    <Input value={storage.getCurrentUser()?.name || ""} disabled />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Đây là mock UI. Trong phiên bản thật, bạn có thể cập nhật thông tin này.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            {/* Danger Zone */}
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  Vùng nguy hiểm
+                </CardTitle>
+                <CardDescription>Xóa workspace này vĩnh viễn</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog
+                  open={workspaceToDelete !== null}
+                  onOpenChange={(open) => !open && setWorkspaceToDelete(null)}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={() => workspace && setWorkspaceToDelete(workspace)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Xóa workspace
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Hành động này không thể hoàn tác. Tất cả dữ liệu trong workspace "
+                        {workspaceToDelete?.name}" sẽ bị xóa vĩnh viễn, bao gồm:
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>Tất cả cuộc hội thoại và tin nhắn</li>
+                          <li>Tất cả kết nối ứng dụng</li>
+                          <li>Các cài đặt và cấu hình</li>
+                        </ul>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteWorkspace}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Đang xóa...
+                          </>
+                        ) : (
+                          "Xóa"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

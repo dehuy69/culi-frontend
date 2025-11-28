@@ -27,6 +27,7 @@ import { storage } from "@/lib/localStorage";
 import { apiClient } from "@/lib/api";
 import type { Workspace } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
+import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -141,31 +142,15 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold text-lg">
-              C
-            </div>
-            <span className="text-xl font-bold gradient-text">Culi</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {user?.name || user?.email}
-            </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Đăng xuất
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="h-screen flex flex-col bg-background">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <WorkspaceSidebar />
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto bg-gradient-subtle">
+          <div className="container mx-auto px-4 py-8">
+            <div className="max-w-6xl mx-auto">
           {/* Title & Search */}
           <div className="mb-8 animate-fade-in">
             <h1 className="text-3xl font-bold mb-2">Workspaces của bạn</h1>
@@ -351,6 +336,8 @@ const Dashboard = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+            </div>
+          </div>
         </div>
       </div>
     </div>

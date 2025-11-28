@@ -7,22 +7,37 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Home, Settings, Link2, ChevronDown, LogOut, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Home, Settings, Link2, ChevronDown, LogOut, Loader2, MessageSquare, User } from "lucide-react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
 import { apiClient } from "@/lib/api";
 import type { Workspace } from "@/lib/types";
+import UserSettingsDialog from "@/components/user/UserSettingsDialog";
+import Logo from "@/components/Logo";
 
 interface WorkspaceSidebarProps {
   currentWorkspaceId?: string;
 }
 
-const WorkspaceSidebar = ({ currentWorkspaceId }: WorkspaceSidebarProps) => {
+const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSidebarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams<{ id?: string }>();
+  
+  // Get workspace ID from prop or URL params
+  const currentWorkspaceId = propWorkspaceId || params.id;
+  
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showUserSettings, setShowUserSettings] = useState(false);
+  
+  // Check if current route is chat page
+  const isChatPage = currentWorkspaceId && location.pathname === `/workspace/${currentWorkspaceId}`;
+  const isSettingsPage = currentWorkspaceId && location.pathname === `/workspace/${currentWorkspaceId}/settings`;
+  const isConnectionsPage = currentWorkspaceId && location.pathname === `/workspace/${currentWorkspaceId}/connections`;
 
   useEffect(() => {
     loadWorkspaces();
@@ -63,12 +78,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId }: WorkspaceSidebarProps) => {
     <div className="w-64 border-r border-border bg-sidebar flex flex-col">
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold text-lg">
-            C
-          </div>
-          <span className="text-lg font-bold gradient-text">Culi</span>
-        </div>
+        <Logo size="md" showText={true} />
       </div>
 
       {/* Workspace Selector */}
@@ -133,41 +143,70 @@ const WorkspaceSidebar = ({ currentWorkspaceId }: WorkspaceSidebarProps) => {
             <Home className="w-4 h-4 mr-2" />
             Dashboard
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => navigate(`/workspace/${currentWorkspaceId}/settings`)}
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Cài đặt
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => navigate(`/workspace/${currentWorkspaceId}/connections`)}
-          >
-            <Link2 className="w-4 h-4 mr-2" />
-            Kết nối ứng dụng
-          </Button>
+          {currentWorkspaceId && (
+            <Button
+              variant={isChatPage ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => navigate(`/workspace/${currentWorkspaceId}`)}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Chat
+            </Button>
+          )}
+          {currentWorkspaceId && (
+            <Button
+              variant={isSettingsPage ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => navigate(`/workspace/${currentWorkspaceId}/settings`)}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Cài đặt
+            </Button>
+          )}
+          {currentWorkspaceId && (
+            <Button
+              variant={isConnectionsPage ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => navigate(`/workspace/${currentWorkspaceId}/connections`)}
+            >
+              <Link2 className="w-4 h-4 mr-2" />
+              Kết nối ứng dụng
+            </Button>
+          )}
         </div>
       </ScrollArea>
 
       {/* User Section */}
       <div className="p-3 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-medium">
-            {storage.getCurrentUser()?.name[0]?.toUpperCase() || "U"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{storage.getCurrentUser()?.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{storage.getCurrentUser()?.email}</p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Đăng xuất
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-2 mb-2 p-2 rounded-md hover:bg-accent transition-colors">
+              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                {storage.getCurrentUser()?.name[0]?.toUpperCase() || "U"}
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium truncate">{storage.getCurrentUser()?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{storage.getCurrentUser()?.email}</p>
+              </div>
+              <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setShowUserSettings(true)}>
+              <User className="w-4 h-4 mr-2" />
+              Cài đặt tài khoản
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Đăng xuất
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      {/* User Settings Dialog */}
+      <UserSettingsDialog open={showUserSettings} onOpenChange={setShowUserSettings} />
     </div>
   );
 };

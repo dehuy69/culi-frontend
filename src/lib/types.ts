@@ -9,6 +9,12 @@ export interface Workspace {
   created_at: string;
 }
 
+export interface UserInfo {
+  id: number;
+  username: string;
+  created_at: string;
+}
+
 export interface Conversation {
   id: number;
   workspace_id: number;
