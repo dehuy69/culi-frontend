@@ -144,10 +144,10 @@ const WorkspaceSidebar = ({ currentWorkspaceId }: WorkspaceSidebarProps) => {
           <Button
             variant="ghost"
             className="w-full justify-start"
-            onClick={() => navigate(`/workspace/${currentWorkspaceId}/mcp`)}
+            onClick={() => navigate(`/workspace/${currentWorkspaceId}/connections`)}
           >
             <Link2 className="w-4 h-4 mr-2" />
-            MCP Connections
+            Kết nối ứng dụng
           </Button>
         </div>
       </ScrollArea>

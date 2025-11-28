@@ -208,6 +208,11 @@ export class ApiClient {
       client_id?: string;
       client_secret?: string;
       retailer?: string;
+      mcp_server_url?: string;
+      mcp_auth_type?: string;
+      mcp_auth_config?: Record<string, any>;
+      config_json?: Record<string, any>;
+      is_default?: boolean;
     }
   ): Promise<ConnectedApp> {
     return this.request<ConnectedApp>(
@@ -227,6 +232,9 @@ export class ApiClient {
       client_id?: string;
       client_secret?: string;
       retailer?: string;
+      mcp_server_url?: string;
+      mcp_auth_config?: Record<string, any>;
+      config_json?: Record<string, any>;
       status?: string;
     }
   ): Promise<ConnectedApp> {

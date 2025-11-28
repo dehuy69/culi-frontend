@@ -8,7 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Workspace from "./pages/Workspace";
 import Settings from "./pages/Settings";
-import MCPSettings from "./pages/MCPSettings";
+import AppConnections from "./pages/AppConnections";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +25,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/workspace/:id" element={<Workspace />} />
           <Route path="/workspace/:id/settings" element={<Settings />} />
-          <Route path="/workspace/:id/mcp" element={<MCPSettings />} />
+          <Route path="/workspace/:id/connections" element={<AppConnections />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

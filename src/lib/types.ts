@@ -73,11 +73,33 @@ export interface ConnectedApp {
 export interface SupportedApp {
   id: string;
   name: string;
-  category: string;
-  connection_method: string;
+  category: string; // "POS_SIMPLE" | "ACCOUNTING" | "UNKNOWN"
+  connection_method: string; // "api" | "mcp"
   description: string;
   requires_retailer: boolean;
   auth_method: string;
   required_fields: string[];
+}
+
+// Helper types for category grouping
+export type AppCategory = "POS_SIMPLE" | "ACCOUNTING" | "UNKNOWN";
+export type ConnectionMethod = "api" | "mcp";
+export type ConnectionStatus = "active" | "inactive" | "connected" | "error";
+export type MCPAuthType = "none" | "api_key" | "bearer" | "basic";
+
+// Grouped apps by category
+export interface GroupedApps {
+  category: AppCategory;
+  categoryLabel: string;
+  apps: SupportedApp[];
+}
+
+// MCP Auth Config types
+export interface MCPAuthConfig {
+  api_key?: string;
+  bearer_token?: string;
+  username?: string;
+  password?: string;
+  [key: string]: any;
 }
 

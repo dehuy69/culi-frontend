@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, ExternalLink, AlertCircle } from "lucide-react";
+import { X, ExternalLink, AlertCircle, Maximize2, Minimize2, MoveHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type BrowserSize = "small" | "medium" | "large" | "full";
 
 interface BrowserPanelProps {
   url: string;
@@ -12,6 +15,23 @@ interface BrowserPanelProps {
 const BrowserPanel = ({ url, onUrlChange, onClose }: BrowserPanelProps) => {
   const [inputUrl, setInputUrl] = useState(url);
   const [iframeError, setIframeError] = useState(false);
+  const [browserSize, setBrowserSize] = useState<BrowserSize>("medium");
+
+  const sizeConfig: Record<BrowserSize, { width: string; label: string; icon: typeof Maximize2; flex?: string }> = {
+    small: { width: "w-[400px]", label: "Nhỏ", icon: Minimize2 },
+    medium: { width: "w-[600px]", label: "Vừa", icon: MoveHorizontal },
+    large: { width: "w-[800px]", label: "Lớn", icon: Maximize2 },
+    full: { width: "w-full", label: "Toàn màn hình", icon: Maximize2, flex: "flex-1" },
+  };
+
+  const cycleSize = () => {
+    const sizes: BrowserSize[] = ["small", "medium", "large", "full"];
+    const currentIndex = sizes.indexOf(browserSize);
+    const nextIndex = (currentIndex + 1) % sizes.length;
+    setBrowserSize(sizes[nextIndex]);
+  };
+
+  const currentSize = sizeConfig[browserSize];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +46,28 @@ const BrowserPanel = ({ url, onUrlChange, onClose }: BrowserPanelProps) => {
   };
 
   return (
-    <div className="w-[600px] border-l border-border flex flex-col bg-background">
+    <div className={cn(
+      "border-l border-border flex flex-col bg-background transition-all duration-300",
+      browserSize === "full" ? "flex-1" : currentSize.width
+    )}>
       {/* Header */}
       <div className="border-b border-border p-3 space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm">Browser</h3>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={cycleSize}
+              className="h-8 w-8"
+              title={`Kích thước: ${currentSize.label}`}
+            >
+              <currentSize.icon className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input

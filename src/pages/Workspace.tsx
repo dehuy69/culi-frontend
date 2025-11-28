@@ -222,7 +222,7 @@ const Workspace = () => {
       <div className="flex flex-1 overflow-hidden">
         <WorkspaceSidebar currentWorkspaceId={id} />
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative">
           <ChatPanel
             messages={messages}
             onSendMessage={handleSendMessage}
