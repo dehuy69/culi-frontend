@@ -8,6 +8,16 @@ Frontend web application cho Culi - AI kế toán cho hộ kinh doanh Việt Nam
 
 ## Tiếng Việt
 
+### 🌐 Live Demo
+
+**Trải nghiệm Culi ngay bây giờ**: [https://culi.ddns.net/](https://culi.ddns.net/)
+
+Demo này cho phép bạn:
+- 💬 Chat với AI agent về kế toán và thuế
+- 🔌 Kết nối với các ứng dụng quản lý bán hàng (KiotViet, Misa eShop, ...)
+- 📊 Xem và quản lý dữ liệu từ các ứng dụng đã kết nối
+- ⚙️ Quản lý workspaces và cài đặt
+
 ### 📖 Tổng quan
 
 Culi Frontend là giao diện web hiện đại được xây dựng với React và TypeScript, cung cấp trải nghiệm người dùng mượt mà cho hệ thống AI kế toán Culi. Ứng dụng cho phép người dùng quản lý workspaces, chat với AI agent, kết nối với các ứng dụng quản lý bán hàng và kế toán.
@@ -166,6 +176,16 @@ Chúng tôi hoan nghênh mọi đóng góp! Vui lòng:
 ---
 
 ## English
+
+### 🌐 Live Demo
+
+**Try Culi now**: [https://culi.ddns.net/](https://culi.ddns.net/)
+
+This demo allows you to:
+- 💬 Chat with AI agent about accounting and tax
+- 🔌 Connect with sales management applications (KiotViet, Misa eShop, ...)
+- 📊 View and manage data from connected applications
+- ⚙️ Manage workspaces and settings
 
 ### 📖 Overview
 
@@ -327,6 +347,7 @@ We welcome contributions! Please:
 ## 🔗 Related Projects
 
 - [Culi Backend](../culi/README.md) - Backend API server
+- **🌐 Live Demo**: [https://culi.ddns.net/](https://culi.ddns.net/)
 
 ## 📞 Support
 
