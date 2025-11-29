@@ -182,6 +182,100 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Stream chat message processing with Server-Sent Events (SSE).
+   * Returns an EventSource that emits StreamEvent objects.
+   */
+  streamMessage(
+    workspaceId: number,
+    message: string,
+    conversationId: number | undefined,
+    onEvent: (event: import("./types").StreamEvent) => void,
+    onError?: (error: Error) => void,
+    onComplete?: () => void
+  ): () => void {
+    const url = `${this.baseUrl}/api/v1/workspaces/${workspaceId}/chat/stream`;
+    
+    // Build request body
+    const body = JSON.stringify({ message, conversation_id: conversationId });
+    
+    // Create EventSource-like connection using fetch with streaming
+    let eventSource: EventSource | null = null;
+    let abortController: AbortController | null = null;
+    
+    // For SSE, we need to use EventSource or fetch with streaming
+    // Since EventSource doesn't support POST, we'll use fetch with ReadableStream
+    abortController = new AbortController();
+    
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+      body,
+      signal: abortController.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        if (!reader) {
+          throw new Error("Response body is not readable");
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            if (onComplete) onComplete();
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                onEvent(data);
+              } catch (e) {
+                console.error("Failed to parse SSE data:", e, line);
+              }
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        if (error.name === "AbortError") {
+          // User cancelled, ignore
+          return;
+        }
+        if (onError) {
+          onError(error);
+        } else {
+          console.error("Stream error:", error);
+        }
+      });
+
+    // Return cleanup function
+    return () => {
+      if (abortController) {
+        abortController.abort();
+      }
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }
+
   async listConversations(workspaceId: number): Promise<ConversationListResponse> {
     return this.request<ConversationListResponse>(
       `/api/v1/workspaces/${workspaceId}/chat/conversations`

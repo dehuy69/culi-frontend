@@ -58,10 +58,33 @@ export interface FrontendMessage {
 
 export interface ReasoningStep {
   id: string;
-  type: "search" | "history" | "mcp" | "strategy" | "execute";
+  type: "search" | "history" | "mcp" | "strategy" | "execute" | "intent" | "plan" | "step" | "web_search" | "app_data";
   status: "pending" | "processing" | "completed" | "error";
   title: string;
   details?: string;
+  node?: string;
+  timestamp?: string;
+}
+
+// Streaming event types
+export interface StreamEvent {
+  event: "node_start" | "node_end" | "intent" | "plan" | "step" | "web_search" | "app_data" | "answer" | "done" | "error";
+  data: {
+    node?: string;
+    intent?: string;
+    plan?: any;
+    step?: any;
+    current_step?: number;
+    total_steps?: number;
+    results_count?: number;
+    has_data?: boolean;
+    content?: string;
+    conversation_id?: number;
+    answer?: string;
+    error?: string;
+    type?: string;
+    timestamp?: string;
+  };
 }
 
 export interface ConnectedApp {

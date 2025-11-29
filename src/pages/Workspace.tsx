@@ -2,13 +2,37 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
 import { apiClient } from "@/lib/api";
-import type { Message as BackendMessage, Conversation } from "@/lib/types";
+import type { Message as BackendMessage, Conversation, StreamEvent, ReasoningStep } from "@/lib/types";
 import type { FrontendMessage } from "@/lib/types";
 import ChatPanel from "@/components/workspace/ChatPanel";
 import BrowserPanel from "@/components/workspace/BrowserPanel";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+
+// Helper functions for reasoning steps
+const getReasoningType = (node: string): ReasoningStep["type"] => {
+  if (node === "intent_router") return "intent";
+  if (node === "web_search") return "search";
+  if (node === "app_read") return "mcp";
+  if (node === "app_plan") return "strategy";
+  if (node === "execute_plan") return "execute";
+  if (node === "context") return "history";
+  return "history";
+};
+
+const getNodeTitle = (node: string): string => {
+  const titles: Record<string, string> = {
+    intent_router: "Phân loại yêu cầu",
+    context: "Tải ngữ cảnh",
+    web_search: "Tìm kiếm web",
+    app_read: "Đọc dữ liệu ứng dụng",
+    app_plan: "Lập kế hoạch",
+    execute_plan: "Thực thi kế hoạch",
+    answer: "Tạo câu trả lời",
+  };
+  return titles[node] || `Xử lý: ${node}`;
+};
 
 const Workspace = () => {
   const { id } = useParams();
@@ -124,60 +148,224 @@ const Workspace = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Add loading message
-    const loadingMessage: FrontendMessage = {
-      id: `loading-${Date.now()}`,
+    // Create assistant message for streaming
+    const assistantMessageId = `assistant-${Date.now()}`;
+    const assistantMessage: FrontendMessage = {
+      id: assistantMessageId,
       role: "assistant",
-      content: "Đang xử lý...",
+      content: "",
       timestamp: new Date().toISOString(),
+      reasoning: [],
     };
-    setMessages((prev) => [...prev, loadingMessage]);
+    setMessages((prev) => [...prev, assistantMessage]);
+
+    // Track reasoning steps
+    const reasoningSteps = new Map<string, ReasoningStep>();
+
+    // Cleanup function for stream
+    let cleanup: (() => void) | null = null;
 
     try {
-      // Send message to API
-      const response = await apiClient.sendMessage(workspaceId, content, conversationId);
+      cleanup = apiClient.streamMessage(
+        workspaceId,
+        content,
+        conversationId,
+        (event: StreamEvent) => {
+          // Handle streaming events
+          setMessages((prev) => {
+            const updated = [...prev];
+            const assistantIndex = updated.findIndex((msg) => msg.id === assistantMessageId);
+            
+            if (assistantIndex === -1) return prev;
 
-      // Update conversation ID if this is a new conversation
-      if (response.conversation_id && !conversationId) {
-        setConversationId(response.conversation_id);
-      }
+            const currentMsg = updated[assistantIndex];
+            const updatedReasoning = currentMsg.reasoning ? [...currentMsg.reasoning] : [];
+            let messageUpdated = false; // Track if message was updated in switch case
 
-      // Reload messages from API to get the full conversation with proper IDs
-      if (response.conversation_id) {
-        const apiMessages = await apiClient.getMessages(workspaceId, response.conversation_id);
-        const convertedMessages = apiMessages.map(convertMessage);
-        setMessages(convertedMessages);
-      } else {
-        // If no conversation_id, remove loading and add response manually
-        setMessages((prev) => {
-          const filtered = prev.filter((msg) => msg.id !== loadingMessage.id);
-          return [
-            ...filtered,
-            {
-              id: `response-${Date.now()}`,
-              role: "assistant",
-              content: response.answer || "Xin lỗi, không thể tạo phản hồi.",
-              timestamp: new Date().toISOString(),
-            },
-          ];
-        });
-      }
+            switch (event.event) {
+              case "node_start":
+                // Add reasoning step for node start
+                if (event.data.node) {
+                  const stepId = `step-${event.data.node}-${Date.now()}`;
+                  const step: ReasoningStep = {
+                    id: stepId,
+                    type: getReasoningType(event.data.node),
+                    status: "processing",
+                    title: getNodeTitle(event.data.node),
+                    node: event.data.node,
+                    timestamp: event.data.timestamp,
+                  };
+                  reasoningSteps.set(event.data.node, step);
+                  updatedReasoning.push(step);
+                }
+                break;
+
+              case "node_end":
+                // Update reasoning step to completed
+                if (event.data.node) {
+                  const step = reasoningSteps.get(event.data.node);
+                  if (step) {
+                    step.status = "completed";
+                    const stepIndex = updatedReasoning.findIndex((s) => s.id === step.id);
+                    if (stepIndex !== -1) {
+                      updatedReasoning[stepIndex] = { ...step };
+                    }
+                  }
+                }
+                break;
+
+              case "intent":
+                // Update with intent information
+                if (event.data.intent) {
+                  const intentStep = updatedReasoning.find((s) => s.type === "intent");
+                  if (intentStep) {
+                    intentStep.details = `Intent: ${event.data.intent}`;
+                  }
+                }
+                break;
+
+              case "plan":
+                // Add plan reasoning step
+                if (event.data.plan) {
+                  const planStep: ReasoningStep = {
+                    id: `plan-${Date.now()}`,
+                    type: "strategy",
+                    status: "completed",
+                    title: "Đã tạo kế hoạch",
+                    details: `Kế hoạch có ${event.data.plan.steps?.length || 0} bước`,
+                    node: event.data.node,
+                    timestamp: event.data.timestamp,
+                  };
+                  updatedReasoning.push(planStep);
+                }
+                break;
+
+              case "step":
+                // Add step execution reasoning
+                if (event.data.step) {
+                  const stepExecution: ReasoningStep = {
+                    id: `exec-${event.data.current_step}-${Date.now()}`,
+                    type: "execute",
+                    status: event.data.step.status === "failed" ? "error" : "completed",
+                    title: `Bước ${event.data.current_step}/${event.data.total_steps}: ${event.data.step.action}`,
+                    details: event.data.step.error || event.data.step.output,
+                    node: event.data.node,
+                    timestamp: event.data.timestamp,
+                  };
+                  updatedReasoning.push(stepExecution);
+                }
+                break;
+
+              case "web_search":
+                // Add web search reasoning
+                if (event.data.results_count) {
+                  const webStep: ReasoningStep = {
+                    id: `web-${Date.now()}`,
+                    type: "search",
+                    status: "completed",
+                    title: "Tìm kiếm thông tin",
+                    details: `Tìm thấy ${event.data.results_count} kết quả`,
+                    node: event.data.node,
+                    timestamp: event.data.timestamp,
+                  };
+                  updatedReasoning.push(webStep);
+                }
+                break;
+
+              case "answer":
+                // Update answer content (even if empty, to show that answer node completed)
+                updated[assistantIndex] = {
+                  ...currentMsg,
+                  content: event.data.content || currentMsg.content || "Đang tạo câu trả lời...",
+                  reasoning: updatedReasoning,
+                };
+                messageUpdated = true;
+                break;
+
+              case "done":
+                // Finalize message
+                if (event.data.conversation_id && !conversationId) {
+                  setConversationId(event.data.conversation_id);
+                }
+                updated[assistantIndex] = {
+                  ...currentMsg,
+                  content: event.data.answer || currentMsg.content,
+                  reasoning: updatedReasoning,
+                };
+                messageUpdated = true;
+                break;
+
+              case "error":
+                // Handle error
+                const errorMessage = event.data.error || "Đã xảy ra lỗi";
+                updated[assistantIndex] = {
+                  ...currentMsg,
+                  content: `❌ Lỗi: ${errorMessage}`,
+                  reasoning: updatedReasoning,
+                };
+                messageUpdated = true;
+                toast({
+                  title: "Lỗi",
+                  description: errorMessage,
+                  variant: "destructive",
+                });
+                break;
+            }
+
+            // Only update reasoning if message wasn't already updated in switch case
+            if (!messageUpdated) {
+              updated[assistantIndex] = {
+                ...currentMsg,
+                reasoning: updatedReasoning,
+              };
+            }
+
+            return updated;
+          });
+        },
+        (error: Error) => {
+          console.error("Stream error:", error);
+          setError(error.message);
+          toast({
+            title: "Lỗi",
+            description: error.message || "Không thể kết nối đến server",
+            variant: "destructive",
+          });
+          // Update assistant message with error
+          setMessages((prev) => {
+            const updated = [...prev];
+            const assistantIndex = updated.findIndex((msg) => msg.id === assistantMessageId);
+            if (assistantIndex !== -1) {
+              updated[assistantIndex] = {
+                ...updated[assistantIndex],
+                content: `❌ Lỗi: ${error.message}`,
+              };
+            }
+            return updated;
+          });
+          setIsLoading(false);
+        },
+        () => {
+          // Stream completed
+          setIsLoading(false);
+        }
+      );
     } catch (error: any) {
-      console.error("Error sending message:", error);
-      const errorMessage =
-        error.message || "Không thể gửi tin nhắn. Vui lòng thử lại.";
+      console.error("Error starting stream:", error);
+      const errorMessage = error.message || "Không thể bắt đầu stream";
       setError(errorMessage);
       toast({
         title: "Lỗi",
         description: errorMessage,
         variant: "destructive",
       });
-
-      // Remove loading message on error, keep user message
-      setMessages((prev) => prev.filter((msg) => msg.id !== loadingMessage.id));
-    } finally {
+      // Remove assistant message on error
+      setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
       setIsLoading(false);
     }
+
+    // Store cleanup function for potential cancellation
+    // (Could be used for cancel button in future)
   };
 
   if (isLoadingMessages) {

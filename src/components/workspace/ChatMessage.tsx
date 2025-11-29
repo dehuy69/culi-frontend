@@ -1,6 +1,6 @@
 import type { FrontendMessage } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Search, History, Database, FileText, Zap, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { ChevronDown, Search, History, Database, FileText, Zap, CheckCircle2, Loader2, XCircle, Brain, Target } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,11 @@ const reasoningIcons = {
   mcp: Database,
   strategy: FileText,
   execute: Zap,
+  intent: Brain,
+  plan: Target,
+  step: Zap,
+  web_search: Search,
+  app_data: Database,
 };
 
 const statusIcons = {
