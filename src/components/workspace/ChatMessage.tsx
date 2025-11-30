@@ -3,6 +3,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, Search, History, Database, FileText, Zap, CheckCircle2, Loader2, XCircle, Brain, Target } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessageProps {
   message: FrontendMessage;
@@ -49,7 +51,85 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
               : "bg-muted text-foreground"
           )}
         >
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-code:text-foreground prose-pre:text-foreground prose-a:text-primary prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Custom styling for markdown elements
+                  h1: ({ node, ...props }) => (
+                    <h1 className="text-xl font-bold mt-4 mb-2 text-foreground" {...props} />
+                  ),
+                  h2: ({ node, ...props }) => (
+                    <h2 className="text-lg font-semibold mt-3 mb-2 text-foreground" {...props} />
+                  ),
+                  h3: ({ node, ...props }) => (
+                    <h3 className="text-base font-semibold mt-2 mb-1 text-foreground" {...props} />
+                  ),
+                  p: ({ node, ...props }) => (
+                    <p className="mb-2 text-foreground leading-relaxed" {...props} />
+                  ),
+                  ul: ({ node, ...props }) => (
+                    <ul className="list-disc list-inside mb-2 space-y-1 text-foreground" {...props} />
+                  ),
+                  ol: ({ node, ...props }) => (
+                    <ol className="list-decimal list-inside mb-2 space-y-1 text-foreground" {...props} />
+                  ),
+                  li: ({ node, ...props }) => (
+                    <li className="ml-2 text-foreground" {...props} />
+                  ),
+                  strong: ({ node, ...props }) => (
+                    <strong className="font-semibold text-foreground" {...props} />
+                  ),
+                  em: ({ node, ...props }) => (
+                    <em className="italic text-foreground" {...props} />
+                  ),
+                  code: ({ node, inline, ...props }: any) =>
+                    inline ? (
+                      <code className="bg-background/50 px-1.5 py-0.5 rounded text-sm font-mono text-foreground" {...props} />
+                    ) : (
+                      <code className="block bg-background/50 p-3 rounded-md text-sm font-mono text-foreground overflow-x-auto mb-2" {...props} />
+                    ),
+                  pre: ({ node, ...props }) => (
+                    <pre className="bg-background/50 p-3 rounded-md overflow-x-auto mb-2" {...props} />
+                  ),
+                  blockquote: ({ node, ...props }) => (
+                    <blockquote className="border-l-4 border-primary/50 pl-4 italic my-2 text-muted-foreground" {...props} />
+                  ),
+                  a: ({ node, ...props }) => (
+                    <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
+                  ),
+                  table: ({ node, ...props }) => (
+                    <div className="overflow-x-auto my-2">
+                      <table className="min-w-full border-collapse border border-border" {...props} />
+                    </div>
+                  ),
+                  thead: ({ node, ...props }) => (
+                    <thead className="bg-muted" {...props} />
+                  ),
+                  tbody: ({ node, ...props }) => (
+                    <tbody {...props} />
+                  ),
+                  tr: ({ node, ...props }) => (
+                    <tr className="border-b border-border" {...props} />
+                  ),
+                  th: ({ node, ...props }) => (
+                    <th className="border border-border px-3 py-2 text-left font-semibold text-foreground" {...props} />
+                  ),
+                  td: ({ node, ...props }) => (
+                    <td className="border border-border px-3 py-2 text-foreground" {...props} />
+                  ),
+                  hr: ({ node, ...props }) => (
+                    <hr className="my-4 border-border" {...props} />
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
 
         {message.reasoning && message.reasoning.length > 0 && (
