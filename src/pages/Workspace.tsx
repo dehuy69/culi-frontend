@@ -8,7 +8,9 @@ import ChatPanel from "@/components/workspace/ChatPanel";
 import BrowserPanel from "@/components/workspace/BrowserPanel";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 
 // Helper functions for reasoning steps
 const getReasoningType = (node: string): ReasoningStep["type"] => {
@@ -37,14 +39,23 @@ const getNodeTitle = (node: string): string => {
 const Workspace = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [messages, setMessages] = useState<FrontendMessage[]>([]);
-  const [showBrowser, setShowBrowser] = useState(true);
+  const [showBrowser, setShowBrowser] = useState(!isMobile); // Hide browser on mobile by default
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [browserUrl, setBrowserUrl] = useState("https://www.kiotviet.vn");
   const [conversationId, setConversationId] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialLoadRef = useRef(false);
+
+  // Update showBrowser when mobile state changes
+  useEffect(() => {
+    if (isMobile) {
+      setShowBrowser(false);
+    }
+  }, [isMobile]);
 
   // Helper function to convert backend message to frontend format
   const convertMessage = (msg: BackendMessage): FrontendMessage => {
@@ -372,7 +383,23 @@ const Workspace = () => {
     return (
       <div className="h-screen flex flex-col bg-background">
         <div className="flex flex-1 overflow-hidden">
-          <WorkspaceSidebar currentWorkspaceId={id} />
+          <WorkspaceSidebar 
+            currentWorkspaceId={id} 
+            open={sidebarOpen}
+            onOpenChange={setSidebarOpen}
+          />
+          {isMobile && (
+            <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="font-semibold">Chat với Culi</h1>
+            </div>
+          )}
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
@@ -388,7 +415,23 @@ const Workspace = () => {
     return (
       <div className="h-screen flex flex-col bg-background">
         <div className="flex flex-1 overflow-hidden">
-          <WorkspaceSidebar currentWorkspaceId={id} />
+          <WorkspaceSidebar 
+            currentWorkspaceId={id}
+            open={sidebarOpen}
+            onOpenChange={setSidebarOpen}
+          />
+          {isMobile && (
+            <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="font-semibold">Chat với Culi</h1>
+            </div>
+          )}
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-destructive mb-4">{error}</p>
@@ -408,24 +451,44 @@ const Workspace = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <div className="flex flex-1 overflow-hidden">
-        <WorkspaceSidebar currentWorkspaceId={id} />
+        <WorkspaceSidebar 
+          currentWorkspaceId={id}
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+        />
 
-        <div className="flex-1 flex overflow-hidden relative">
-          <ChatPanel
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onToggleBrowser={() => setShowBrowser(!showBrowser)}
-            showBrowser={showBrowser}
-            isLoading={isLoading}
-          />
-
-          {showBrowser && (
-            <BrowserPanel
-              url={browserUrl}
-              onUrlChange={setBrowserUrl}
-              onClose={() => setShowBrowser(false)}
-            />
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Mobile Header */}
+          {isMobile && (
+            <div className="md:hidden border-b border-border p-3 flex items-center gap-3 bg-background">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="font-semibold">Chat với Culi</h1>
+            </div>
           )}
+
+          <div className="flex-1 flex overflow-hidden">
+            <ChatPanel
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              onToggleBrowser={() => setShowBrowser(!showBrowser)}
+              showBrowser={showBrowser}
+              isLoading={isLoading}
+            />
+
+            {showBrowser && !isMobile && (
+              <BrowserPanel
+                url={browserUrl}
+                onUrlChange={setBrowserUrl}
+                onClose={() => setShowBrowser(false)}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

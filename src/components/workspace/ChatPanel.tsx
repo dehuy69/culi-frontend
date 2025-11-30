@@ -5,6 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Monitor, MonitorOff } from "lucide-react";
 import type { FrontendMessage } from "@/lib/types";
 import ChatMessage from "./ChatMessage";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface ChatPanelProps {
   messages: FrontendMessage[];
@@ -21,6 +23,7 @@ const ChatPanel = ({
   showBrowser,
   isLoading = false,
 }: ChatPanelProps) => {
+  const isMobile = useIsMobile();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,38 +52,43 @@ const ChatPanel = ({
   return (
     <div className="flex-1 flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between bg-background/80 backdrop-blur-sm">
-        <div>
+      <div className={cn(
+        "border-b border-border flex items-center justify-between bg-background/80 backdrop-blur-sm",
+        isMobile ? "p-3" : "p-4"
+      )}>
+        <div className={cn(isMobile && "hidden")}>
           <h2 className="font-semibold">Chat với Culi</h2>
           <p className="text-xs text-muted-foreground">AI Agent hỗ trợ kế toán</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onToggleBrowser}
-          className="gap-2"
-        >
-          {showBrowser ? (
-            <>
-              <MonitorOff className="w-4 h-4" />
-              Ẩn Browser
-            </>
-          ) : (
-            <>
-              <Monitor className="w-4 h-4" />
-              Hiện Browser
-            </>
-          )}
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleBrowser}
+            className="gap-2"
+          >
+            {showBrowser ? (
+              <>
+                <MonitorOff className="w-4 h-4" />
+                Ẩn Browser
+              </>
+            ) : (
+              <>
+                <Monitor className="w-4 h-4" />
+                Hiện Browser
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-4xl mx-auto">
+      <ScrollArea className={cn("flex-1", isMobile ? "p-2" : "p-4")}>
+        <div className={cn("space-y-4 mx-auto", isMobile ? "max-w-full px-2" : "max-w-4xl")}>
           {messages.length === 0 && (
             <div className="text-center py-12 text-muted-foreground animate-fade-in">
-              <p className="text-lg mb-2">Xin chào! Tôi là Culi 👋</p>
-              <p className="text-sm">Hãy hỏi tôi bất cứ điều gì về kế toán hộ kinh doanh của bạn</p>
+              <p className={cn("mb-2", isMobile ? "text-base" : "text-lg")}>Xin chào! Tôi là Culi 👋</p>
+              <p className={cn(isMobile ? "text-xs" : "text-sm")}>Hãy hỏi tôi bất cứ điều gì về kế toán hộ kinh doanh của bạn</p>
             </div>
           )}
           {messages.map((message) => (
@@ -105,24 +113,30 @@ const ChatPanel = ({
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t border-border p-4 bg-background">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+      <div className={cn("border-t border-border bg-background", isMobile ? "p-2" : "p-4")}>
+        <form onSubmit={handleSubmit} className={cn("mx-auto", isMobile ? "max-w-full" : "max-w-4xl")}>
           <div className="flex gap-2">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Nhập câu hỏi của bạn... (Shift + Enter để xuống dòng)"
-              className="min-h-[60px] max-h-[200px] resize-none"
-              rows={2}
+              className={cn(
+                "resize-none",
+                isMobile ? "min-h-[50px] max-h-[150px] text-sm" : "min-h-[60px] max-h-[200px]"
+              )}
+              rows={isMobile ? 1 : 2}
             />
             <Button
               type="submit"
               size="icon"
-              className="gradient-primary h-[60px] w-[60px] flex-shrink-0"
+              className={cn(
+                "gradient-primary flex-shrink-0",
+                isMobile ? "h-[50px] w-[50px]" : "h-[60px] w-[60px]"
+              )}
               disabled={!input.trim() || isLoading}
             >
-              <Send className="w-5 h-5" />
+              <Send className={cn(isMobile ? "w-4 h-4" : "w-5 h-5")} />
             </Button>
           </div>
         </form>

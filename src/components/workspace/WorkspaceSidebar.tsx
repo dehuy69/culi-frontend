@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Home, Settings, Link2, ChevronDown, LogOut, Loader2, MessageSquare, User } from "lucide-react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
@@ -16,15 +17,24 @@ import { apiClient } from "@/lib/api";
 import type { Workspace } from "@/lib/types";
 import UserSettingsDialog from "@/components/user/UserSettingsDialog";
 import Logo from "@/components/Logo";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceSidebarProps {
   currentWorkspaceId?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSidebarProps) => {
+const WorkspaceSidebar = ({ 
+  currentWorkspaceId: propWorkspaceId, 
+  open: openProp, 
+  onOpenChange: setOpenProp 
+}: WorkspaceSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ id?: string }>();
+  const isMobile = useIsMobile();
   
   // Get workspace ID from prop or URL params
   const currentWorkspaceId = propWorkspaceId || params.id;
@@ -33,6 +43,11 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserSettings, setShowUserSettings] = useState(false);
+  
+  // Internal state for mobile drawer (only used if onOpenChange not provided)
+  const [_open, _setOpen] = useState(false);
+  const open = openProp ?? _open;
+  const setOpen = setOpenProp ?? _setOpen;
   
   // Check if current route is chat page
   const isChatPage = currentWorkspaceId && location.pathname === `/workspace/${currentWorkspaceId}`;
@@ -74,8 +89,17 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
     return "🏪";
   };
 
-  return (
-    <div className="w-64 border-r border-border bg-sidebar flex flex-col">
+  // Handle navigation - close drawer on mobile when navigating
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    if (isMobile) {
+      setOpen(false);
+    }
+  };
+
+  // Sidebar content component (reusable for both mobile and desktop)
+  const SidebarContent = () => (
+    <>
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border">
         <Logo size="md" showText={true} />
@@ -114,7 +138,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
                 {workspaces.map((ws) => (
                   <DropdownMenuItem
                     key={ws.id}
-                    onClick={() => navigate(`/workspace/${ws.id}`)}
+                    onClick={() => handleNavigate(`/workspace/${ws.id}`)}
                     className="cursor-pointer"
                   >
                     <span className="mr-2">{getWorkspaceIcon(ws)}</span>
@@ -122,7 +146,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
                   </DropdownMenuItem>
                 ))}
                 <Separator className="my-1" />
-                <DropdownMenuItem onClick={() => navigate("/dashboard")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => handleNavigate("/dashboard")} className="cursor-pointer">
                   <Home className="w-4 h-4 mr-2" />
                   Tất cả workspaces
                 </DropdownMenuItem>
@@ -138,7 +162,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
           <Button
             variant="ghost"
             className="w-full justify-start"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => handleNavigate("/dashboard")}
           >
             <Home className="w-4 h-4 mr-2" />
             Dashboard
@@ -147,7 +171,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
             <Button
               variant={isChatPage ? "secondary" : "ghost"}
               className="w-full justify-start"
-              onClick={() => navigate(`/workspace/${currentWorkspaceId}`)}
+              onClick={() => handleNavigate(`/workspace/${currentWorkspaceId}`)}
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Chat
@@ -157,7 +181,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
             <Button
               variant={isSettingsPage ? "secondary" : "ghost"}
               className="w-full justify-start"
-              onClick={() => navigate(`/workspace/${currentWorkspaceId}/settings`)}
+              onClick={() => handleNavigate(`/workspace/${currentWorkspaceId}/settings`)}
             >
               <Settings className="w-4 h-4 mr-2" />
               Cài đặt
@@ -167,7 +191,7 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
             <Button
               variant={isConnectionsPage ? "secondary" : "ghost"}
               className="w-full justify-start"
-              onClick={() => navigate(`/workspace/${currentWorkspaceId}/connections`)}
+              onClick={() => handleNavigate(`/workspace/${currentWorkspaceId}/connections`)}
             >
               <Link2 className="w-4 h-4 mr-2" />
               Kết nối ứng dụng
@@ -192,12 +216,12 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => setShowUserSettings(true)}>
+            <DropdownMenuItem onClick={() => setShowUserSettings(true)} className="cursor-pointer">
               <User className="w-4 h-4 mr-2" />
               Cài đặt tài khoản
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
               <LogOut className="w-4 h-4 mr-2" />
               Đăng xuất
             </DropdownMenuItem>
@@ -207,6 +231,26 @@ const WorkspaceSidebar = ({ currentWorkspaceId: propWorkspaceId }: WorkspaceSide
 
       {/* User Settings Dialog */}
       <UserSettingsDialog open={showUserSettings} onOpenChange={setShowUserSettings} />
+    </>
+  );
+
+  // Mobile: Render as Sheet drawer
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 bg-sidebar">
+          <div className="flex flex-col h-full">
+            <SidebarContent />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Render as fixed sidebar
+  return (
+    <div className={cn("w-64 border-r border-border bg-sidebar flex flex-col", "hidden md:flex")}>
+      <SidebarContent />
     </div>
   );
 };

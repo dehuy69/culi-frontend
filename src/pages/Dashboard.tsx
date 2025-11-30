@@ -21,16 +21,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, MessageSquare, LogOut, Loader2, Trash2 } from "lucide-react";
+import { Plus, Search, MessageSquare, LogOut, Loader2, Trash2, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/localStorage";
 import { apiClient } from "@/lib/api";
 import type { Workspace } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState(storage.getCurrentUser());
@@ -40,6 +43,7 @@ const Dashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Check auth
@@ -145,35 +149,53 @@ const Dashboard = () => {
     <div className="h-screen flex flex-col bg-background">
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <WorkspaceSidebar />
+        <WorkspaceSidebar 
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+        />
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto bg-gradient-subtle">
-          <div className="container mx-auto px-4 py-8">
-            <div className="max-w-6xl mx-auto">
-          {/* Title & Search */}
-          <div className="mb-8 animate-fade-in">
-            <h1 className="text-3xl font-bold mb-2">Workspaces của bạn</h1>
-            <p className="text-muted-foreground mb-4">
-              Quản lý các hộ kinh doanh trong các workspace riêng biệt
-            </p>
-            <div className="flex gap-3">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm workspace..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogTrigger asChild>
-                  <Button className="gradient-primary">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tạo workspace
-                  </Button>
-                </DialogTrigger>
+        <div className="flex-1 flex flex-col overflow-hidden bg-gradient-subtle">
+          {/* Mobile Header */}
+          {isMobile && (
+            <div className="md:hidden border-b border-border p-3 flex items-center gap-3 bg-background">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="font-semibold">Workspaces</h1>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto">
+            <div className={cn("mx-auto", isMobile ? "px-3 py-4" : "container px-4 py-8")}>
+              <div className={cn("mx-auto", isMobile ? "max-w-full" : "max-w-6xl")}>
+                {/* Title & Search */}
+                <div className={cn("animate-fade-in", isMobile ? "mb-6" : "mb-8")}>
+                  <h1 className={cn("font-bold mb-2", isMobile ? "text-2xl" : "text-3xl")}>Workspaces của bạn</h1>
+                  <p className={cn("text-muted-foreground mb-4", isMobile && "text-sm")}>
+                    Quản lý các hộ kinh doanh trong các workspace riêng biệt
+                  </p>
+                  <div className={cn("gap-3", isMobile ? "flex flex-col" : "flex")}>
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm kiếm workspace..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                      <DialogTrigger asChild>
+                        <Button className="gradient-primary w-full md:w-auto">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Tạo workspace
+                        </Button>
+                      </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Tạo workspace mới</DialogTitle>
@@ -219,12 +241,12 @@ const Dashboard = () => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
+                  </div>
+                </div>
 
-          {/* Workspace Grid */}
-          {isLoading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Workspace Grid */}
+                {isLoading ? (
+                  <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3")}>
               {[1, 2, 3].map((i) => (
                 <Card key={i} className="animate-pulse">
                   <CardHeader>
@@ -236,10 +258,10 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  </div>
+                ) : (
+                  <>
+                    <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3")}>
                 {filteredWorkspaces.map((workspace, index) => (
                   <Card
                     key={workspace.id}
@@ -284,58 +306,59 @@ const Dashboard = () => {
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+                    </div>
 
-              {filteredWorkspaces.length === 0 && !isLoading && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">
-                    {searchQuery
-                      ? "Không tìm thấy workspace nào"
-                      : "Bạn chưa có workspace nào"}
-                  </p>
-                  {!searchQuery && (
-                    <Button onClick={() => setShowCreateDialog(true)} className="gradient-primary">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tạo workspace đầu tiên
-                    </Button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                    {filteredWorkspaces.length === 0 && !isLoading && (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground mb-4">
+                          {searchQuery
+                            ? "Không tìm thấy workspace nào"
+                            : "Bạn chưa có workspace nào"}
+                        </p>
+                        {!searchQuery && (
+                          <Button onClick={() => setShowCreateDialog(true)} className="gradient-primary">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Tạo workspace đầu tiên
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
 
-          {/* Delete Confirmation Dialog */}
-          <AlertDialog
-            open={workspaceToDelete !== null}
-            onOpenChange={(open) => !open && setWorkspaceToDelete(null)}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Xác nhận xóa workspace</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Bạn có chắc chắn muốn xóa workspace "{workspaceToDelete?.name}"? Hành động này
-                  không thể hoàn tác.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteWorkspace}
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                {/* Delete Confirmation Dialog */}
+                <AlertDialog
+                  open={workspaceToDelete !== null}
+                  onOpenChange={(open) => !open && setWorkspaceToDelete(null)}
                 >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Đang xóa...
-                    </>
-                  ) : (
-                    "Xóa"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Xác nhận xóa workspace</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Bạn có chắc chắn muốn xóa workspace "{workspaceToDelete?.name}"? Hành động này
+                        không thể hoàn tác.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteWorkspace}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Đang xóa...
+                          </>
+                        ) : (
+                          "Xóa"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           </div>
         </div>

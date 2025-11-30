@@ -7,8 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import { apiClient } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Settings as SettingsIcon, Loader2, AlertCircle } from "lucide-react";
+import { Trash2, Settings as SettingsIcon, Loader2, AlertCircle, Menu } from "lucide-react";
 import type { Workspace } from "@/lib/types";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +26,7 @@ import {
 const Settings = () => {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   // Memoize workspaceId to prevent recalculation
   const workspaceId = useMemo(() => {
@@ -31,6 +34,8 @@ const Settings = () => {
     const parsed = parseInt(params.id, 10);
     return isNaN(parsed) ? null : parsed;
   }, [params.id]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Workspace state
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -147,9 +152,24 @@ const Settings = () => {
   if (!workspaceId) {
     return (
       <div className="h-screen flex bg-background">
-        <WorkspaceSidebar />
+        <WorkspaceSidebar 
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+        />
+        {isMobile && (
+          <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+            <h1 className="font-semibold">Cài đặt</h1>
+          </div>
+        )}
         <div className="flex-1 overflow-auto">
-          <div className="container max-w-4xl mx-auto p-6">
+          <div className={cn("mx-auto", isMobile ? "max-w-full px-3 py-4" : "container max-w-4xl p-6")}>
             <Card className="border-destructive">
               <CardHeader>
                 <CardTitle className="text-destructive flex items-center gap-2">
@@ -176,27 +196,45 @@ const Settings = () => {
   if (isLoadingWorkspace && !workspace && !workspaceError) {
     return (
       <div className="h-screen flex bg-background">
-        <WorkspaceSidebar currentWorkspaceId={params.id} />
-        <div className="flex-1 overflow-auto">
-          <div className="container max-w-4xl mx-auto p-6">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-                <SettingsIcon className="w-8 h-8" />
-                Cài đặt Workspace
-              </h1>
-              <p className="text-muted-foreground">Quản lý cài đặt cho workspace này</p>
+        <WorkspaceSidebar 
+          currentWorkspaceId={params.id}
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {isMobile && (
+            <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="font-semibold">Cài đặt</h1>
             </div>
-            <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="h-4 bg-muted rounded w-24 animate-pulse" />
-                    <div className="h-10 bg-muted rounded animate-pulse" />
+          )}
+          <div className="flex-1 overflow-auto">
+            <div className={cn("mx-auto", isMobile ? "max-w-full px-3 py-4" : "container max-w-4xl p-6")}>
+              <div className={cn("mb-6", isMobile && "mb-4")}>
+                <h1 className={cn("font-bold mb-2 flex items-center gap-2", isMobile ? "text-2xl" : "text-3xl")}>
+                  <SettingsIcon className={cn(isMobile ? "w-6 h-6" : "w-8 h-8")} />
+                  Cài đặt Workspace
+                </h1>
+                <p className={cn("text-muted-foreground", isMobile && "text-sm")}>Quản lý cài đặt cho workspace này</p>
+              </div>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="h-4 bg-muted rounded w-24 animate-pulse" />
+                      <div className="h-10 bg-muted rounded animate-pulse" />
+                    </div>
+                    <div className="h-10 bg-muted rounded w-32 animate-pulse" />
                   </div>
-                  <div className="h-10 bg-muted rounded w-32 animate-pulse" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
@@ -205,16 +243,33 @@ const Settings = () => {
 
   return (
     <div className="h-screen flex bg-background">
-      <WorkspaceSidebar currentWorkspaceId={params.id} />
-      <div className="flex-1 overflow-auto">
-        <div className="container max-w-4xl mx-auto p-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-              <SettingsIcon className="w-8 h-8" />
-              Cài đặt Workspace
-            </h1>
-            <p className="text-muted-foreground">Quản lý cài đặt cho workspace này</p>
+      <WorkspaceSidebar 
+        currentWorkspaceId={params.id}
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {isMobile && (
+          <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+            <h1 className="font-semibold">Cài đặt</h1>
           </div>
+        )}
+        <div className="flex-1 overflow-auto">
+          <div className={cn("mx-auto", isMobile ? "max-w-full px-3 py-4" : "container max-w-4xl p-6")}>
+            <div className={cn("mb-6", isMobile && "mb-4")}>
+              <h1 className={cn("font-bold mb-2 flex items-center gap-2", isMobile ? "text-2xl" : "text-3xl")}>
+                <SettingsIcon className={cn(isMobile ? "w-6 h-6" : "w-8 h-8")} />
+                Cài đặt Workspace
+              </h1>
+              <p className={cn("text-muted-foreground", isMobile && "text-sm")}>Quản lý cài đặt cho workspace này</p>
+            </div>
 
           <div className="space-y-4">
             {/* Workspace Info Card */}
@@ -355,6 +410,7 @@ const Settings = () => {
                 </AlertDialog>
               </CardContent>
             </Card>
+          </div>
           </div>
         </div>
       </div>

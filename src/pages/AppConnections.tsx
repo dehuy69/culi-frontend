@@ -5,22 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Search, Package, Store, Calculator, Box, Plus } from "lucide-react";
+import { Loader2, Search, Package, Store, Calculator, Box, Plus, Menu } from "lucide-react";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import AppConnectionCard from "@/components/workspace/AppConnectionCard";
 import BrowseAppsDialog from "@/components/workspace/BrowseAppsDialog";
 import { apiClient } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import type { SupportedApp, ConnectedApp, AppCategory, GroupedApps } from "@/lib/types";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 const AppConnections = () => {
   const { id } = useParams();
+  const isMobile = useIsMobile();
   const [supportedApps, setSupportedApps] = useState<SupportedApp[]>([]);
   const [connections, setConnections] = useState<ConnectedApp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const appCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Category labels - short names
@@ -143,11 +147,29 @@ const AppConnections = () => {
   if (isLoading) {
     return (
       <div className="h-screen flex bg-background">
-        <WorkspaceSidebar currentWorkspaceId={id} />
-        <div className="flex-1 overflow-auto flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Đang tải danh sách apps...</p>
+        <WorkspaceSidebar 
+          currentWorkspaceId={id}
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {isMobile && (
+            <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="font-semibold">Kết nối ứng dụng</h1>
+            </div>
+          )}
+          <div className="flex-1 overflow-auto flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground">Đang tải danh sách apps...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -156,24 +178,41 @@ const AppConnections = () => {
 
   return (
     <div className="h-screen flex bg-background">
-      <WorkspaceSidebar currentWorkspaceId={id} />
-      <div className="flex-1 overflow-auto">
-        <div className="container max-w-6xl mx-auto p-6">
-          <div className="mb-6 flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Kết nối ứng dụng</h1>
-              <p className="text-muted-foreground">
-                Kết nối với các phần mềm quản lý và kế toán của bạn
-              </p>
-            </div>
+      <WorkspaceSidebar 
+        currentWorkspaceId={id}
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {isMobile && (
+          <div className="md:hidden border-b border-border p-3 flex items-center gap-3">
             <Button
-              onClick={() => setIsBrowseDialogOpen(true)}
-              className="gradient-primary"
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(true)}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Thêm ứng dụng
+              <Menu className="w-5 h-5" />
             </Button>
+            <h1 className="font-semibold">Kết nối ứng dụng</h1>
           </div>
+        )}
+        <div className="flex-1 overflow-auto">
+          <div className={cn("mx-auto", isMobile ? "max-w-full px-3 py-4" : "container max-w-6xl p-6")}>
+            <div className={cn("mb-6", isMobile ? "mb-4" : "", isMobile ? "flex flex-col gap-3" : "flex items-start justify-between")}>
+              <div>
+                <h1 className={cn("font-bold mb-2", isMobile ? "text-2xl" : "text-3xl")}>Kết nối ứng dụng</h1>
+                <p className={cn("text-muted-foreground", isMobile && "text-sm")}>
+                  Kết nối với các phần mềm quản lý và kế toán của bạn
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsBrowseDialogOpen(true)}
+                className={cn("gradient-primary", isMobile && "w-full")}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm ứng dụng
+              </Button>
+            </div>
 
           {/* Search bar */}
           <div className="mb-6">
@@ -268,16 +307,17 @@ const AppConnections = () => {
               })}
             </div>
           )}
-        </div>
+          </div>
 
-        {/* Browse Apps Dialog */}
-        <BrowseAppsDialog
-          open={isBrowseDialogOpen}
-          onOpenChange={setIsBrowseDialogOpen}
-          workspaceId={workspaceId}
-          connections={connections}
-          onSelectApp={handleSelectApp}
-        />
+          {/* Browse Apps Dialog */}
+          <BrowseAppsDialog
+            open={isBrowseDialogOpen}
+            onOpenChange={setIsBrowseDialogOpen}
+            workspaceId={workspaceId}
+            connections={connections}
+            onSelectApp={handleSelectApp}
+          />
+        </div>
       </div>
     </div>
   );
